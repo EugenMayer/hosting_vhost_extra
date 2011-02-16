@@ -2,8 +2,8 @@
 /**
 * Implementation of hook_schema().
 */
-function hosting_folders_schema() {
-  $schema['hosting_folders'] = array(
+function hosting_vhost_extra_schema() {
+  $schema['hosting_vhost_extra'] = array(
     'fields' => array(
       'vid' => array(
         'type' => 'int',
@@ -16,7 +16,7 @@ function hosting_folders_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
-      'folders' => array(
+      'vhost_extra' => array(
         'type' => 'text',
         'not null' => TRUE,
       ),
@@ -27,11 +27,11 @@ function hosting_folders_schema() {
   );
   return $schema;
 }
-function hosting_folders_install() {
+function hosting_vhost_extra_install() {
   // Create tables.
-  drupal_install_schema('hosting_folders');
+  drupal_install_schema('hosting_vhost_extra');
 }
 function hosting_folders_uninstall() {
   // Remove tables.
-  drupal_uninstall_schema('hosting_folders');
+  drupal_uninstall_schema('hosting_vhost_extra');
 }

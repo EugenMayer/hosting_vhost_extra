@@ -1,5 +1,0 @@
-name = Hosting site folder
-description = Lets you set directories which should be created for every site
-package = Hosting
-dependencies[] = hosting_site
-core = 6.x

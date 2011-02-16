@@ -1,0 +1,120 @@
+<?php
+// Copyright (c) 2011 KontextWork
+// Author: Eugen Mayer
+
+function hosting_vhost_extra_menu() {
+  return array(
+    'admin/hosting/site_vhost_extra' => array(
+       'type' => MENU_NORMAL_ITEM,
+       'title' => 'Site vhost',
+       'description' => 'Configure extra site vhost_extra',
+       'page callback' => 'drupal_get_form',
+       'page arguments' => array('hosting_vhost_extra_admin_settings'),
+       'access arguments' => array('administer site configuration'),
+       'file' => 'hosting_vhost_extra.admin.inc'
+    ),
+  );
+}
+/**
+* Implementation of hook_form_alter()
+*/
+function hosting_vhost_extra_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'site_node_form') {
+    $form['vhost_extra_fs'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Vhost'),
+      '#collapsed' => TRUE,
+      '#collapsible' => TRUE,
+    );
+    $form['vhost_extra_fs']['vhost_extra'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Extra vhost settings'),
+      '#description' => t('That settings will be added to a site vhost as an addition. If you have installed tokens, you can use it here. If you need to do more complex things, see http://community.aegirproject.org/node/70'),
+      '#default_value' => $form['#node']->vhost_extra ? $form['#node']->vhost_extra : variable_get('hosting_vhost_extra_default',''),
+      '#required' => FALSE,
+      '#weight' => 0,
+    );
+    if (module_exists('token')) {
+      $form['vhost_extra_fs']['token_help'] = array(
+        '#title' => t('Replacement patterns'),
+        '#type' => 'fieldset',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+
+      $form['vhost_extra_fs']['token_help']['help'] = array(
+        '#value' => theme('token_help', 'node'),
+      );
+    }
+    return $form;
+  }
+}
+function _hosting_vhost_extra_site_vhost_extra($site_url, $replace_tokens = TRUE) {
+  // We are not looking in the node revisions table, we simply only support the most recent
+  // revision only, soe node table
+  // TODO: use dbtng here .. if it ever will be available with aegir default
+  $result = db_select("SELECT nid, vid,vhost_extra from {node} AS n LEFT JOIN {hosting_vhost_extra} AS f ON n.vid=f.vid WHERE n.title='%s' LIMIT 1",$site_url);
+  $r = db_fetch_object($result);
+  $vhost_extra = $r->vhost_extra;
+
+  // If we have token installed, replace all tokens
+  if($replace_tokens && module_exists('token')) {
+    // global tokens
+    $vhost_extra = token_replace($vhost_extra,'global', NULL);
+    // node basesd tokens 
+    $node = node_load($r->nid, $r->vid);
+    $vhost_extra = token_replace($vhost_extra,'node', $node);
+  }
+  return $vhost_extra;
+}
+/** 
+* Implementation of hook_insert()
+*/
+function hosting_vhost_extra_insert($node) {
+  if ($node->vhost_extra) {
+    db_query("INSERT INTO {hosting_vhost_extra} (vid, nid, vhost_extra) VALUES (%d, %d, '%s')", $node->vid, $node->nid, $node->folders);
+  }
+}
+/**
+* Implementation of hook_update()
+*/
+function hosting_vhost_extra_update($node) {
+  db_query("UPDATE {hosting_vhost_extra} SET folders = '%s' WHERE nid = %d", $node->folders, $node->nid);
+}
+/**
+* Implementation of hook_delete()
+*/
+function hosting_vhost_extra_delete($node) {
+  db_query("DELETE FROM {hosting_vhost_extra} WHERE nid=%d", $node->nid);
+}
+/**
+* Implementation of hook_delete_revision()
+*/
+function hosting_vhost_extra_delete_revision($node) {
+  db_query("DELETE FROM {hosting_vhost_extra} WHERE vid=%d", $node->vid);
+}
+/** 
+* Implementation of hook_nodeapi()
+*/
+function hosting_vhost_extra_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  if ($node->type == 'site') {
+    switch ($op) {
+    case 'insert':
+        hosting_vhost_extra_insert($node);
+        break;
+      case 'update':
+        hosting_vhost_extra_update($node);
+        break;
+      case 'delete' :
+        hosting_vhost_extra_delete($node);
+        break;
+      case 'delete revision':
+        hosting_vhost_extra_delete_revision($node);
+        break;
+      case 'load':
+        $additions['vhost_extra'] = db_result(db_query("SELECT vhost_extra FROM {hosting_vhost_extra} WHERE vid=%d", $node->vid));
+        return $additions;
+        break;
+    }
+  }
+}

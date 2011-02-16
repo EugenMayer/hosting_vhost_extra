@@ -1,0 +1,5 @@
+name = Extra site vhost settings
+description = Enables you to add extra vhost setting on a site by site base
+package = Hosting
+dependencies[] = hosting_site
+core = 6.x
