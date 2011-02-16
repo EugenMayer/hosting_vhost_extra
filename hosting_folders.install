@@ -1,0 +1,37 @@
+<?php
+/**
+* Implementation of hook_schema().
+*/
+function hosting_folders_schema() {
+  $schema['hosting_folders'] = array(
+    'fields' => array(
+      'vid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'folders' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+      ),
+    ),
+    'indexes' => array(
+      'vid' => array('vid'),
+    ),
+  );
+  return $schema;
+}
+function hosting_folders_install() {
+  // Create tables.
+  drupal_install_schema('hosting_folders');
+}
+function hosting_folders_uninstall() {
+  // Remove tables.
+  drupal_uninstall_schema('hosting_folders');
+}
