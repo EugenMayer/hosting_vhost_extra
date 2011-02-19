@@ -34,6 +34,16 @@ function hosting_vhost_extra_form_alter(&$form, $form_state, $form_id) {
       '#required' => FALSE,
       '#weight' => 0,
     );
+    
+    $form['vhost_extra_fs']['vhost_extra_ssl'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Extra vhost ssl settings'),
+      '#description' => t('That settings will be added to a site vhost <b>SSL</b> as an addition. If you have installed tokens, you can use it here. If you need to do more complex things, see http://community.aegirproject.org/node/70'),
+      '#default_value' => $form['#node']->vhost_extra_ssl ? $form['#node']->vhost_extra_ssl : variable_get('hosting_vhost_extra_ssl_default',''),
+      '#required' => FALSE,
+      '#weight' => 0,
+    );
+
     if (module_exists('token')) {
       $form['vhost_extra_fs']['token_help'] = array(
         '#title' => t('Replacement patterns'),
@@ -49,37 +59,57 @@ function hosting_vhost_extra_form_alter(&$form, $form_state, $form_id) {
     return $form;
   }
 }
-function _hosting_vhost_extra_site_vhost_extra($site_url, $replace_tokens = TRUE) {
+
+function _hosting_vhost_extra_webserver_name($platform_id) {
+  $platform = node_load($platform_id);
+  $server = $platform->web_server;
+  return db_result(db_query('SELECT type FROM {hosting_service} WHERE nid = %d AND service="http"',$server));
+}
+function _hosting_vhost_extra_vhost_settings($site_url, $namespace, $replace_tokens = TRUE) {
   // We are not looking in the node revisions table, we simply only support the most recent
   // revision only, soe node table
   // TODO: use dbtng here .. if it ever will be available with aegir default
-  $result = db_select("SELECT nid, vid,vhost_extra from {node} AS n LEFT JOIN {hosting_vhost_extra} AS f ON n.vid=f.vid WHERE n.title='%s' LIMIT 1",$site_url);
+  $result = db_query("SELECT n.nid, n.vid, f.vhost_extra, f.vhost_extra_ssl from {node} AS n LEFT JOIN {hosting_vhost_extra} AS f ON n.vid=f.vid WHERE n.title='%s'", $site_url);
   $r = db_fetch_object($result);
   $vhost_extra = $r->vhost_extra;
+  $vhost_extra_ssl = $r->vhost_extra_ssl;
+  $extra = '';
+
+  switch($namespace) {
+    case 'apache':
+    case 'nginx':
+      $extra = $vhost_extra;
+    break;
+    case 'apache_ssl':
+    case 'nginx_ssl':
+      $extra = $vhost_extra_ssl;
+    break;
+  }
 
   // If we have token installed, replace all tokens
   if($replace_tokens && module_exists('token')) {
     // global tokens
-    $vhost_extra = token_replace($vhost_extra,'global', NULL);
+    $extra = token_replace($extra,'global', NULL);
     // node basesd tokens 
     $node = node_load($r->nid, $r->vid);
-    $vhost_extra = token_replace($vhost_extra,'node', $node);
+    $extra = token_replace($extra,'node', $node);
   }
-  return $vhost_extra;
+  return $extra;
 }
 /** 
 * Implementation of hook_insert()
 */
 function hosting_vhost_extra_insert($node) {
-  if ($node->vhost_extra) {
-    db_query("INSERT INTO {hosting_vhost_extra} (vid, nid, vhost_extra) VALUES (%d, %d, '%s')", $node->vid, $node->nid, $node->folders);
+  if ($node->vhost_extra || $node->vhost_extra_ssl) {
+    db_query("INSERT INTO {hosting_vhost_extra} (vid, nid, vhost_extra, vhost_extra_ssl) VALUES (%d, %d, '%s', '%s')", $node->vid, $node->nid, $node->vhost_extra,$node->vhost_extra_ssl);
   }
 }
 /**
 * Implementation of hook_update()
 */
 function hosting_vhost_extra_update($node) {
-  db_query("UPDATE {hosting_vhost_extra} SET folders = '%s' WHERE nid = %d", $node->folders, $node->nid);
+  db_query("UPDATE {hosting_vhost_extra} SET vhost_extra = '%s' WHERE nid = %d", $node->vhost_extra, $node->nid);
+  db_query("UPDATE {hosting_vhost_extra} SET vhost_extra_ssl = '%s' WHERE nid = %d", $node->vhost_extra_ssl, $node->nid);
 }
 /**
 * Implementation of hook_delete()
@@ -112,7 +142,9 @@ function hosting_vhost_extra_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         hosting_vhost_extra_delete_revision($node);
         break;
       case 'load':
-        $additions['vhost_extra'] = db_result(db_query("SELECT vhost_extra FROM {hosting_vhost_extra} WHERE vid=%d", $node->vid));
+        $result = db_fetch_object(db_query("SELECT vhost_extra,vhost_extra_ssl FROM {hosting_vhost_extra} WHERE vid=%d", $node->vid));
+        $additions['vhost_extra'] = $result->vhost_extra; 
+        $additions['vhost_extra_ssl'] = $result->vhost_extra_ssl; 
         return $additions;
         break;
     }

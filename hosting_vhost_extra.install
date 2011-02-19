@@ -20,6 +20,10 @@ function hosting_vhost_extra_schema() {
         'type' => 'text',
         'not null' => TRUE,
       ),
+      'vhost_extra_ssl' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+      ),
     ),
     'indexes' => array(
       'vid' => array('vid'),
@@ -31,7 +35,7 @@ function hosting_vhost_extra_install() {
   // Create tables.
   drupal_install_schema('hosting_vhost_extra');
 }
-function hosting_folders_uninstall() {
+function hosting_vhost_uninstall() {
   // Remove tables.
   drupal_uninstall_schema('hosting_vhost_extra');
 }
