@@ -35,7 +35,7 @@ function hosting_vhost_extra_install() {
   // Create tables.
   drupal_install_schema('hosting_vhost_extra');
 }
-function hosting_vhost_uninstall() {
+function hosting_vhost_extra_uninstall() {
   // Remove tables.
   drupal_uninstall_schema('hosting_vhost_extra');
 }

@@ -27,5 +27,4 @@ function drush_hosting_vhost_extra_pre_hosting_task() {
       $task->options["vhost_extra_$key"] = _hosting_vhost_extra_vhost_settings($task->ref->title, $namespace, TRUE);
     }
   }
-
 }
