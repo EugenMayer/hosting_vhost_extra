@@ -71,6 +71,9 @@ function _hosting_vhost_extra_vhost_settings($site_url, $namespace, $replace_tok
   // TODO: use dbtng here .. if it ever will be available with aegir default
   $result = db_query("SELECT n.nid, n.vid, f.vhost_extra, f.vhost_extra_ssl from {node} AS n LEFT JOIN {hosting_vhost_extra} AS f ON n.vid=f.vid WHERE n.title='%s'", $site_url);
   $r = db_fetch_object($result);
+  if(!$r) {
+    return '';
+  }
   $vhost_extra = $r->vhost_extra;
   $vhost_extra_ssl = $r->vhost_extra_ssl;
   $extra = '';
